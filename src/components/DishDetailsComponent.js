@@ -2,6 +2,9 @@ import React, { Component } from 'react';
 import { Media, Card, CardImg, CardImgOverlay, CardBody, CardText, CardTitle, Breadcrumb, BreadcrumbItem, Button, Modal, ModalHeader, ModalBody, Form, FormGroup, Label, Input, Jumbotron, FormFeedback, Row, Col } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { Control, LocalForm, Errors } from 'react-redux-form';
+import { Loading } from './LoadingComponent';
+import { baseUrl } from '../shared/baseUrl'
+import { FadeTransform, Fade, Stagger } from 'react-animation-components';
 
 
 const nameLengthValid = (val) => val && (val.length >= 3 && val.length <= 15)
@@ -56,7 +59,8 @@ class CommentForm extends Component {
     }
 
     handleSubmit(values) {
-        alert('Current State is: ' + JSON.stringify(values))
+        this.props.postComment(this.props.dishId, values.rate, values.author, values.comment)
+        //alert('Current State is: ' + JSON.stringify(values))
     }
 
     render() {
@@ -154,16 +158,16 @@ class CommentForm extends Component {
                                     <Row className="form-group" >
                                         <Label md={2} htmlFor="username">Username</Label>
                                         <Col md={12}>
-                                            <Control.text model=".username" id="username" name="username" className="form-control"
+                                            <Control.text model=".author" id="username" name="username" className="form-control"
                                                 validators={{ nameLengthValid }}
                                             />
-                                            <Errors 
-                                            className="text-danger"
-                                            model =".username"
-                                            show="touched"
-                                            messages={{
-                                                nameLengthValid: 'The username should be greater than 2 characters and less than 15 characters'
-                                            }}
+                                            <Errors
+                                                className="text-danger"
+                                                model=".author"
+                                                show="touched"
+                                                messages={{
+                                                    nameLengthValid: 'The username should be greater than 2 characters and less than 15 characters'
+                                                }}
                                             />
                                         </Col>
                                     </Row>
@@ -187,7 +191,50 @@ class CommentForm extends Component {
     }
 }
 
+class RenderComments extends Component {
 
+    constructor(props) {
+        super(props);
+    }
+    render() {
+        const comments = this.props.comments.map((comment) => {
+            return (
+                <div key={comment.id} >
+                <Fade in>
+
+                    <Media tag="li">
+                        <Media body >
+                            <Media heading>{comment.comment}</Media>
+                            <p>-- {comment.author}  {new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: '2-digit' }).format(new Date(Date.parse(comment.date)))}</p>
+                        </Media>
+                    </Media>
+                </Fade>
+
+                </div>
+            )
+        });
+
+        return (
+            <>
+                <Stagger in>
+                    <Media list width="100%">
+                      
+                        <Media tag="li">
+                            <Media body >
+                                <Media heading>Comments</Media>
+                            </Media>
+                        </Media>
+
+                        {comments}
+                    </Media>
+                </Stagger>
+                <CommentForm dishId={this.props.dishId} postComment={this.props.postComment} />
+
+
+            </>
+        );
+    }
+}
 
 class DishDetails extends Component {
 
@@ -199,8 +246,26 @@ class DishDetails extends Component {
     }
 
     render() {
+        if (this.props.isLoading) {
+            return (
+                <div className="container">
+                    <div className="row">
+                        <Loading />
+                    </div>
+                </div>
+            );
+        }
+        else if (this.props.errMess) {
+            return (
+                <div className="container">
+                    <div className="row">
+                        <h4>{this.props.errMess}</h4>
+                    </div>
+                </div>
+            );
+        }
 
-        if (this.props.dish != null) {
+        else if (this.props.dish != null) {
             const comments = this.props.comments.map((comment) => {
                 return (
                     <div key={comment.id} >
@@ -226,18 +291,23 @@ class DishDetails extends Component {
                     </div>
                     <div className="row">
                         <div className="col-12 col-md-5 m-1">
-                            <Card >
-                                <CardImg width="100%" src={this.props.dish.image} alt={this.props.dish.name} />
+                            <FadeTransform
+                                in
+                                transformProps={{
+                                    exitTransform: 'scale(0.5) translateY(-50%)'
+                                }}>
+                                <Card >
+                                    <CardImg width="100%" src={baseUrl + this.props.dish.image} alt={this.props.dish.name} />
 
-                                <CardBody>
-                                    <CardTitle className="mt-3">{this.props.dish.name}</CardTitle>
-                                    <CardText>{this.props.dish.description}</CardText>
-                                </CardBody>
-                            </Card>
-
+                                    <CardBody>
+                                        <CardTitle className="mt-3">{this.props.dish.name}</CardTitle>
+                                        <CardText>{this.props.dish.description}</CardText>
+                                    </CardBody>
+                                </Card>
+                            </FadeTransform>
                         </div>
 
-                        <div className="col-12 col-md-5 m-1">
+                        {/*}  <div className="col-12 col-md-5 m-1">
                             <Media list width="100%">
                                 <Media tag="li">
                                     <Media body >
@@ -247,8 +317,10 @@ class DishDetails extends Component {
                                 {comments}
                             </Media>
                             <CommentForm />
-                        </div>
-                    </div>
+                        </div>*/}
+
+                        <div className="col-12 col-md-5 m-1">
+                            <RenderComments comments={this.props.comments} postComment={this.props.postComment} dishId={this.props.dish.id} /></div></div>
                 </div>
             )
         }
